@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: . 
+      dockerfile: Dockerfile
+    container_name: voice-ai-backend
+    env_file:
+      - .env
+    environment:
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+      ENV_FILE: /app/.env
+      PYTHONPATH: /app:/app/app
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./app/logs:/app/app/logs
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - voice_ai_net
+
+  db:
+    image: postgres:15-alpine
+    container_name: voice-ai-postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${PG_USER:-dogan}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-dogank}
+      POSTGRES_DB: ${PG_DBNAME:-voice_assistant_db_new}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-dogan} -d $${POSTGRES_DB:-voice_assistant_db_new}"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - voice_ai_net
+
+volumes:
+  postgres_data:
+
+networks:
+  voice_ai_net:
+    driver: bridge
+

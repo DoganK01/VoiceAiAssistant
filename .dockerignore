@@ -1,0 +1,67 @@
+
+# IDE / Editor directories
+.vscode/
+.idea/
+*.code-workspace
+
+# Python cache and virtual environments
+# Ignore venv specifically inside backend
+backend/.venv/
+backend/__pycache__/
+# General cache pattern
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+wheels/
+pip-wheel-metadata/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Secrets / Logs / Local config / Test reports
+# Ignore .env in backend, but allow root .env if used by compose substitution
+backend/.env
+# General .env pattern (use carefully if root .env needed for compose)
+# *.env
+backend/logs/
+*.log
+htmlcov/
+.coverage
+*.prof
+*.prof.*
+
+# Docker files (avoid copying themselves into context)
+Dockerfile
+docker-compose.yml
+*.dockerignore
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Other build artifacts or local files
+*.bak
+*.swp
+
+# Node modules if frontend had build steps
+frontend/node_modules/
+
+# Don't ignore the source code directories themselves!
+# !backend/
+# !frontend/
+
+# Don't ignore lock file or project definition needed for build
+!pyproject.toml
+!uv.lock
+
