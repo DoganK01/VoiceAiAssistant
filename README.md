@@ -4,6 +4,11 @@ This project implements a real-time, voice-to-voice AI assistant accessible via 
 
 The backend is built with Python using FastAPI, handling WebSocket communication, orchestrating AI service calls (Groq for STT, an Agent using Groq/OpenAI LLM, OpenAI for TTS), interacting with tools, and storing conversation history in PostgreSQL. The entire application is containerized using Docker for easy local development and deployment.
 
+## Application Flow Diagram
+
+This diagram shows the sequence of events for a typical voice interaction:
+![image](https://github.com/user-attachments/assets/195a0c1e-59e2-4c0f-a973-b8d645f4bbfc)
+
 ## Features
 
 * **Real-time Voice Input:** Captures audio via browser's MediaRecorder API.
@@ -93,7 +98,4 @@ The backend is built with Python using FastAPI, handling WebSocket communication
     * Run: `docker-compose down`
     * To remove database data: `docker-compose down -v`
 
-## Application Flow Diagram
-
-This diagram shows the sequence of events for a typical voice interaction:
 
