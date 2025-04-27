@@ -8,7 +8,6 @@ import psycopg
 
 from app.backend.schemas import ConversationTurn
 
-ADVISORY_LOCK_ID = 9876543210
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,6 @@ async def check_pool_connection(pool: AsyncConnectionPool) -> bool:
 
 async def add_conversation_turn(
     pool_or_conn: AsyncConnectionPool | psycopg.AsyncConnection,
-    # Accept individual fields including timestamps
     session_id: str,
     user_transcript: Optional[str],
     ai_response: Optional[str],
@@ -36,7 +34,7 @@ async def add_conversation_turn(
     ai_timestamp: Optional[datetime]
 ) -> Optional[ConversationTurn]:
     """Adds a conversation turn with individual timestamps."""
-    # SQL includes new timestamp columns
+
     sql = """
         INSERT INTO conversations (
             session_id, user_transcript, ai_response, user_timestamp, ai_timestamp
@@ -51,14 +49,12 @@ async def add_conversation_turn(
 
     record = None
     try:
-        # Logic to use pool or connection remains the same
         if isinstance(pool_or_conn, AsyncConnectionPool):
             async with pool_or_conn.connection() as conn:
                  async with conn.cursor(row_factory=dict_row) as cur:
                       await cur.execute(sql, params)
                       record = await cur.fetchone()
         elif isinstance(pool_or_conn, psycopg.AsyncConnection):
-             # Assume connection is already managed (e.g., within caller's 'async with')
              async with pool_or_conn.cursor(row_factory=dict_row) as cur:
                   await cur.execute(sql, params)
                   record = await cur.fetchone()
@@ -68,22 +64,19 @@ async def add_conversation_turn(
 
         if record:
             logger.info(f"Conversation turn {record['id']} saved for session {session_id}")
-            # Validate and return Pydantic model
             return ConversationTurn.model_validate(record)
         return None
-    except (psycopg.Error, Exception) as e: # Catch specific DB errors if possible
+    except (psycopg.Error, Exception) as e:
         logger.error(f"Failed to save conversation turn for session {session_id}: {e}", exc_info=True)
-        # Consider specific error handling (e.g., DataError, IntegrityError)
         return None
 
 async def get_history_turns(
     pool_or_conn: AsyncConnectionPool | psycopg.AsyncConnection,
     session_id: str,
-    limit: int = 20 # Limit the number of *rows* (turns) fetched
+    limit: int = 20
 ) -> List[ConversationTurn]:
     """Retrieves history turns including individual timestamps."""
     turns = []
-    # SQL selects new timestamp columns
     sql = """
         SELECT id, session_id, user_transcript, ai_response,
                user_timestamp, ai_timestamp, created_at
@@ -95,7 +88,6 @@ async def get_history_turns(
     params = (session_id, limit)
     records = []
     try:
-        # Logic to use pool or connection remains the same
         if isinstance(pool_or_conn, AsyncConnectionPool):
              async with pool_or_conn.connection() as conn:
                   async with conn.cursor(row_factory=dict_row) as cur:
@@ -109,7 +101,6 @@ async def get_history_turns(
              logger.error(f"Invalid type passed for pool_or_conn: {type(pool_or_conn)}")
              return []
 
-        # Convert records to Pydantic models and reverse to get chronological order
         turns = [ConversationTurn.model_validate(record) for record in reversed(records)]
         logger.info(f"Retrieved {len(turns)} history turns for session {session_id}.")
     except (psycopg.Error, Exception) as e:
@@ -125,12 +116,7 @@ async def create_conversations_table(pool: AsyncConnectionPool):
     if not pool or not isinstance(pool, AsyncConnectionPool):
          logger.error("Cannot create table, invalid database pool provided.")
          return
-    # Check if pool is open might be needed depending on when this is called
-    # if not pool.is_open():
-    #      logger.error("Cannot create table, database pool is not open.")
-    #      return
 
-    # Use BIGSERIAL for auto-incrementing bigint primary key
     create_table_sql = """
     CREATE TABLE IF NOT EXISTS conversations (
         id BIGSERIAL PRIMARY KEY,
@@ -147,22 +133,9 @@ async def create_conversations_table(pool: AsyncConnectionPool):
     CREATE INDEX IF NOT EXISTS idx_conversations_session_id ON conversations (session_id);
     """
 
-    lock_acquired = False # Flag for advisory lock (optional)
+    lock_acquired = False
     try:
         async with pool.connection() as conn:
-            # --- Optional: Acquire Advisory Lock ---
-            # Uncomment if running multiple backend instances concurrently during startup
-            # logger.debug(f"Attempting to acquire advisory lock {ADVISORY_LOCK_ID}...")
-            # async with conn.cursor() as cur:
-            #     await cur.execute(f"SELECT pg_try_advisory_lock({ADVISORY_LOCK_ID})")
-            #     lock_acquired = await cur.fetchone()[0]
-            #     if not lock_acquired:
-            #         logger.warning("Could not acquire schema init advisory lock, another instance might be initializing.")
-            #         return # Exit if lock not acquired
-            # logger.info("Acquired schema init advisory lock.")
-            # --- End Optional Advisory Lock ---
-
-            # Proceed with table/index creation
             async with conn.cursor() as cur:
                 logger.info("Ensuring 'conversations' table exists with new schema...")
                 await cur.execute(create_table_sql)
@@ -176,16 +149,13 @@ async def create_conversations_table(pool: AsyncConnectionPool):
 
     except (psycopg.Error, Exception) as e:
         logger.error(f"Error during database schema initialization: {e}", exc_info=True)
-        # Consider re-raising if table creation is critical for startup
-        raise # Re-raise error to potentially stop app startup
-    finally: # --- Optional: Release Advisory Lock ---
+        raise
+    finally:
         if lock_acquired:
             try:
-                # Use the same pool to get a connection to release the lock
                 async with pool.connection() as conn:
                      async with conn.cursor() as cur:
                          await cur.execute(f"SELECT pg_advisory_unlock({ADVISORY_LOCK_ID})")
                          logger.info("Released schema init advisory lock.")
             except Exception as lock_release_e:
                  logger.error(f"Failed to release schema init advisory lock: {lock_release_e}")
-        # --- End Optional Advisory Lock ---
