@@ -9,6 +9,13 @@ The backend is built with Python using FastAPI, handling WebSocket communication
 This diagram shows the sequence of events for a typical voice interaction:
 ![image](https://github.com/user-attachments/assets/195a0c1e-59e2-4c0f-a973-b8d645f4bbfc)
 
+## Demo
+
+https://github.com/user-attachments/assets/b3ea28ed-21d8-4a55-9ee9-3e873c5d11cc
+### With Memory:
+
+https://github.com/user-attachments/assets/d2ec17e0-516f-47fa-bca5-6e9c10397465
+
 ## Features
 
 * **Real-time Voice Input:** Captures audio via browser's MediaRecorder API.
