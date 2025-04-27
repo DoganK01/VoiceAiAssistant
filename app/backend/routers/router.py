@@ -35,8 +35,9 @@ async def read_history(
             HistoryItem(
                 user_transcript=turn.user_transcript,
                 ai_response=turn.ai_response,
-                interaction_timestamp=turn.interaction_timestamp
-            ) for turn in history_turns if turn.interaction_timestamp
+                user_timestamp=turn.user_timestamp,
+                ai_timestamp=turn.ai_timestamp
+            ) for turn in history_turns if turn.created_at
         ]
         return HistoryResponse(session_id=session_id, history=api_history_items)
     except Exception as e:
